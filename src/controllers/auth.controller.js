@@ -1,6 +1,7 @@
 import { comparePassword } from "../helpers/bcrypt.helper.js";
 import { UserModel } from "../models/mongoose/user.model.js";
 import { hashPassword } from "../helpers/bcrypt.helper.js";
+import { signToken } from "../helpers/jwt.helper.js";
 
 export const register = async (req, res) => {
   const { username, email, password, profile } = req.body;
@@ -28,22 +29,20 @@ export const login = async (req, res) => {
   try {
     const user = await UserModel.findOne({ email: email });
 
-    const authenticated = await comparePassword(password, user.password);
+    const isAuthenticated = await comparePassword(password, user.password);
 
-    if (!authenticated || !user) {
+    if (!isAuthenticated || !user) {
       throw new Error("Las credenciales son incorrectas");
     }
 
-    const token = generateToken(user);
+    const token = signToken(user);
 
     res.cookie("token", token, {
       httpOnly: true,
-      maxAge: 1000 * 60 * 60,
+      maxAge: 1000 * 60 * 60, // 1 hora
     });
 
-    return res.status(200).json({ data: token });
-
-    return res.status(200).json({ msg: "Usuario logueado correctamente" });
+    return res.status(200).json({ msg: "Logueado correctamente", data: token });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ msg: "Error interno del servidor" });
@@ -52,8 +51,26 @@ export const login = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    // TODO: devolver profile del user logueado actualmente
-    return res.status(200).json({ data: profile });
+    const userId = req.user.id;
+    // Buscar usuario en la base de datos (excluyendo el password)
+    const user = await UserModel.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      data: {
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+      msg: "Perfil obtenido exitosamente",
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ msg: "Error interno del servidor" });
