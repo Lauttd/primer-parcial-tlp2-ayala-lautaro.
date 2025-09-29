@@ -21,7 +21,18 @@ const AssetSchema = new Schema(
     acquisitionDate: { type: Date, required: true },
     acquisitionValue: { type: Number, required: true, min: 0 },
     // ! FALTA COMPLETAR ACA
+    //Esto hace referencia al documento user.
+    responsible: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    //Esto hace referencia a Categoria.
+    categories: {
+      type: [Schema.Types.ObjectId],
+      ref: "Category",
+    },
   },
+
   { timestamps: true }
 );
 

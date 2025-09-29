@@ -1,6 +1,10 @@
+import { signToken, verifyToken } from "../helpers/jwt.helper.js";
+import { comparePassword } from "../helpers/bcrypt.helper.js";
+import { UserModel } from "../models/mongoose/user.model";
+import { generateToken } from "../../../trabajo-practico-integrador-2/src/helpers/jwt.helper";
+
 export const register = async (req, res) => {
   try {
-    // TODO: crear usuario con password hasheada y profile embebido
     return res.status(201).json({ msg: "Usuario registrado correctamente" });
   } catch (error) {
     console.log(error);
@@ -9,8 +13,26 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    // TODO: buscar user, validar password, firmar JWT y setear cookie httpOnly
+    const user = await UserModel.findOne({ email: email });
+
+    const authenticated = await comparePassword(password, user.password);
+
+    if (!authenticated || !user) {
+      throw new Error("Las credenciales son incorrectas");
+    }
+
+    const token = generateToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60,
+    });
+
+    return res.status(200).json({ data: token });
+
     return res.status(200).json({ msg: "Usuario logueado correctamente" });
   } catch (error) {
     console.log(error);
